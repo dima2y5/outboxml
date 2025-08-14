@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 from outboxml import config
 from outboxml.automl_utils import load_last_pickle_models_result
-from outboxml.core.email import EMail, AutoMLReviewEMail
+from outboxml.core.email import EMail, AutoMLReviewEMail, HTMLReport
 from outboxml.core.enums import ModelsParams
 from outboxml.core.prepared_datasets import FeatureSelectionPrepareDataset
 from outboxml.core.pydantic_models import AutoMLConfig
@@ -353,6 +353,7 @@ class AutoMLManager(DataSetsManager):
         ds_manager_for_save = DataSetsManager(config_name=self.__default_models_config, external_config=self._external_config)
         ds_manager_for_save.load_dataset(data=self.dataset)
         ds_manager_for_save._results = self._results
+        ds_manager_for_save.group_name = group_name
         ResultExport(ds_manager=ds_manager_for_save, config=self._external_config).save(to_mlflow=False,
                                                                                         path_to_save=self._external_config.results_path,
                                                                                         to_pickle=True)
@@ -442,6 +443,14 @@ class AutoMLManager(DataSetsManager):
                     EMail(self._external_config).success_release_mail(self.automl_results.result_pickle_name,
                                                                       new_features=self.automl_results.new_features)
             self.status['EMail Review'] = True
+        else:
+            if error is not None:
+                HTMLReport(self._external_config).error_report(group_name=self.group_name,
+                                                               error=str(error),
+                                                               status=self.status)
+            else:
+                HTMLReport(self._external_config).success_report(self.automl_results)
+
 
     def __init_auto_ml(self, ):
 
@@ -465,7 +474,7 @@ class AutoMLManager(DataSetsManager):
             raise ValidationError(e)
         self._init_dsmanager()
         self._is_initialized = True
-        self.group_name = f"{self._auto_ml_config.group_name}"
+        self.group_name = f"{self._auto_ml_config.group_name}_{self._auto_ml_config.project}"
         self._feature_selection_config = self._auto_ml_config.feature_selection
         self._hp_tuning_config = self._auto_ml_config.hp_tune  # use best model = False
         if self._retro:
@@ -510,7 +519,7 @@ class AutoMLManager(DataSetsManager):
                     metrics_df = res_export.compare_metrics(model_name=key,
                                                             ds_manager_result=result_to_compare,
                                                             business_metric=self._business_metric,
-                                                            show=False, only_main=True)
+                                                            only_main=True)
                 else:
                     metrics_df = pd.concat([res_export.metrics_df(model_name=key,
                                                        train_test='train'),
@@ -554,7 +563,7 @@ class AutoMLManager(DataSetsManager):
                                                                   cut_max_value=0.9,
                                                                   samples=100,
                                                                   cohort_base='model')
-            figures[key].show()
+
 
         return figures
 
