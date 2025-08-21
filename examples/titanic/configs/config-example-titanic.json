@@ -3,7 +3,7 @@
   "project": "titanic",
   "version": "1",
   "data_config": {
-    "source": "database",
+    "source": "сsv",
     "local_name_source": "./data/titanic.csv",
     "table_name_source": "public.'TitanicExample'",
     "separation" : {
