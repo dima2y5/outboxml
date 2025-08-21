@@ -88,11 +88,11 @@ last_seen_id = 0
 def check_for_new_data(auto_ml_config: AutoMLConfig, script: Callable, config=None):
     global last_seen_id
 
-    # Подключение к базе данных
+    # Connecting to the database
 
     params = config.connection_params
     try:
-        # Устанавливаем соединение с базой данных
+        # Establishing a connection to the database
         engine = create_engine(params)
 
         with engine.connect() as connection:
@@ -100,18 +100,18 @@ def check_for_new_data(auto_ml_config: AutoMLConfig, script: Callable, config=No
             ID = trigger['field']
             table_name = trigger['table_name']
 
-            #TODO : разобраться с другими подключениями
+            # TODO: figure out other connections
             result = connection.execute(text(f"""SELECT "{ID}" FROM "{table_name}" ORDER BY "{ID}" DESC LIMIT 1;"""))
-            new_id = result.fetchone()  # Получаем первую строку результата
+            new_id = result.fetchone()  # Fetching the first row of the result
 
-            # Проверяем, есть ли новые данные
+            # Checking if there is new data
             if new_id is not None:
-                new_id = new_id[0]  # Получаем значение из кортежа
+                new_id = new_id[0]  # Getting a value from the tuple
                 if new_id > last_seen_id:
                     print(f"New data with: {new_id}")
                     last_seen_id = new_id
-                    # Вызов скрипта Auto ML
+                    # Calling the Auto ML script
                     script()
 
     except Exception as e:
-        print(f"Произошла ошибка: {e}")
+        print(f"An error occurred: {e}")
