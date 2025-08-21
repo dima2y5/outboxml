@@ -142,10 +142,10 @@ def load_dataset_from_db(data_config: DataModelConfig) -> pd.DataFrame:
     sql_query = " ".join([
         f"""
             select *
-            from {data_config.table_name_source}
+            from "{data_config.table_name_source}"
         """,
         f"""
-            where {data_config.extra_conditions}
+            where "{data_config.extra_conditions}"
         """ if data_config.extra_conditions else ""
     ])
 

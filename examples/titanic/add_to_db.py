@@ -1,6 +1,6 @@
 import sys
-sys.path.append("../../../")
-sys.path.append("../../../outboxml")
+sys.path.append("../../")
+sys.path.append("../../outboxml")
 
 from outboxml import config
 from outboxml.automl_manager import AutoMLConfig

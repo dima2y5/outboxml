@@ -1,6 +1,6 @@
 import sys
-sys.path.append("../../../")
-sys.path.append("../../../outboxml")
+sys.path.append("../../")
+sys.path.append("../../outboxml")
 
 import time
 from typing import Callable, Any
