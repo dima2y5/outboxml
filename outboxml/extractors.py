@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pickle
 from loguru import logger
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import os
 import shutil
 import subprocess
@@ -21,6 +21,7 @@ class Extractor(ABC):
     """Base interface fo extracting data
     Inheritanced user classes should contain extract_dataset() method which returns padnas Dataframe and
     """
+
     def __init__(self, *params):
         self.__connection_config = None
         self.load_config_from_env = False
@@ -44,6 +45,29 @@ class BaseExtractor(Extractor):
         super().__init__()
         self.__data_config = data_config
 
+    def _create_db_trigger(self, table_name: str):
+        engine = create_engine(config.connection_params)
+
+        trigger_sql = f"""
+        CREATE OR REPLACE FUNCTION notify_on_insert_stmt()
+        RETURNS trigger AS $$
+        BEGIN
+            PERFORM pg_notify('table_changes', 'rows inserted');
+            RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql;
+
+        DROP TRIGGER IF EXISTS my_trigger ON "{table_name}";
+
+        CREATE TRIGGER my_trigger
+        AFTER INSERT ON "{table_name}"
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION notify_on_insert_stmt();
+        """
+
+        with engine.begin() as conn:
+            conn.execute(text(trigger_sql))
+
     def extract_dataset(self) -> pd.DataFrame:
         source = self.__data_config.source
 
@@ -55,6 +79,7 @@ class BaseExtractor(Extractor):
                 dataset.to_sql(table_name,
                                con=config.connection_params,
                                if_exists='replace')
+                self._create_db_trigger(table_name)
                 self.__data_config.source = FilesNames.database
             except Exception as exc:
                 logger.error('Loading local file to db error||' + str(exc))
@@ -127,8 +152,6 @@ def load_dataset_from_db(data_config: DataModelConfig) -> pd.DataFrame:
     if data_config.source == FilesNames.database:
         logger.info("Load data from database")
         data = database_to_pandas(sql_query=sql_query)
-
-
 
     if data is not None and not data.empty:
         logger.debug(f"Data loaded successfully from {data_config.table_name_source}")

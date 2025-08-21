@@ -1,3 +1,7 @@
+import sys
+sys.path.append("../../../")
+sys.path.append("../../../outboxml")
+
 from outboxml.automl_manager import AutoMLManager
 import config
 config_name = './configs/config-example-titanic.json'
