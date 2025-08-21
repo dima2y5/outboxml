@@ -14,8 +14,8 @@ from outboxml.automl_manager import AutoMLConfig
 def main(auto_ml_script: Callable, auto_ml_config: str, config: Any):
     with open(auto_ml_config, encoding='utf-8') as f:
         auto_ml_config = AutoMLConfig.model_validate(json.load(f))
-    params = {'auto_ml_config': auto_ml_config, 'auto_ml_script': auto_ml_script, 'config': config}
-    schedule.every(5).minutes.do(check_for_new_data, *params)
+    params = {'auto_ml_config': auto_ml_config, 'script': auto_ml_script, 'config': config}
+    schedule.every(2).minutes.do(check_for_new_data, **params)
 
     while True:
         schedule.run_pending()

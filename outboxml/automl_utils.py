@@ -6,7 +6,8 @@ from typing import Callable
 
 import mlflow
 from loguru import logger
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+import select
 
 from outboxml.core.pydantic_models import AutoMLConfig
 from outboxml.core.utils import ResultPickle
@@ -99,7 +100,8 @@ def check_for_new_data(auto_ml_config: AutoMLConfig, script: Callable, config=No
             ID = trigger['field']
             table_name = trigger['table_name']
 
-            result = connection.execute(f"SELECT {ID} FROM {table_name} ORDER BY id DESC LIMIT 1;")
+            #TODO : разобраться с другими подключениями
+            result = connection.execute(text(f"""SELECT "{ID}" FROM "{table_name}" ORDER BY "{ID}" DESC LIMIT 1;"""))
             new_id = result.fetchone()  # Получаем первую строку результата
 
             # Проверяем, есть ли новые данные
