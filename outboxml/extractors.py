@@ -49,20 +49,47 @@ class BaseExtractor(Extractor):
         engine = create_engine(config.connection_params)
 
         trigger_sql = f"""
-        CREATE OR REPLACE FUNCTION notify_on_insert_stmt()
-        RETURNS trigger AS $$
-        BEGIN
-            PERFORM pg_notify('table_changes', 'rows inserted');
-            RETURN NULL;
-        END;
-        $$ LANGUAGE plpgsql;
-
-        DROP TRIGGER IF EXISTS my_trigger ON "{table_name}";
-
-        CREATE TRIGGER my_trigger
-        AFTER INSERT ON "{table_name}"
-        FOR EACH STATEMENT
-        EXECUTE FUNCTION notify_on_insert_stmt();
+            -- 🔹 Function for DML (data operations)
+            CREATE OR REPLACE FUNCTION notify_on_dml()
+            RETURNS trigger AS $$
+            BEGIN
+                PERFORM pg_notify(
+                    'table_changes',
+                    format('DML event: %s on table %s', TG_OP, TG_TABLE_NAME)
+                );
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+            
+            -- Drop old trigger if it exists
+            DROP TRIGGER IF EXISTS my_trigger ON "{table_name}";
+            
+            -- Create new trigger for DML
+            CREATE TRIGGER my_trigger
+            AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON "{table_name}"
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION notify_on_dml();
+            
+            
+            -- 🔹 Function for DDL (schema changes)
+            CREATE OR REPLACE FUNCTION notify_on_ddl()
+            RETURNS event_trigger AS $$
+            BEGIN
+                PERFORM pg_notify(
+                    'table_changes',
+                    format('DDL event: %s in schema %s', TG_TAG, current_schema())
+                );
+            END;
+            $$ LANGUAGE plpgsql;
+            
+            -- Drop event trigger if it exists
+            DROP EVENT TRIGGER IF EXISTS ddl_notify;
+            
+            -- Create event trigger
+            CREATE EVENT TRIGGER ddl_notify
+            ON ddl_command_end
+            WHEN TAG IN ('ALTER TABLE')
+            EXECUTE FUNCTION notify_on_ddl();
         """
 
         with engine.begin() as conn:
