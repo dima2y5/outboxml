@@ -45,7 +45,7 @@ class BaseExtractor(Extractor):
         super().__init__()
         self.__data_config = data_config
 
-    def _create_db_trigger(self, table_name: str):
+    def _create_db_trigger_postgre(self, table_name: str):
         engine = create_engine(config.connection_params)
 
         trigger_sql = f"""
@@ -106,7 +106,7 @@ class BaseExtractor(Extractor):
                 dataset.to_sql(table_name,
                                con=config.connection_params,
                                if_exists='replace')
-                self._create_db_trigger(table_name)
+                self._create_db_trigger_postgre(table_name)
                 self.__data_config.source = FilesNames.database
             except Exception as exc:
                 logger.error('Loading local file to db error||' + str(exc))
@@ -169,10 +169,10 @@ def load_dataset_from_db(data_config: DataModelConfig) -> pd.DataFrame:
     sql_query = " ".join([
         f"""
             select *
-            from "{data_config.table_name_source}"
+            from {data_config.table_name_source}
         """,
         f"""
-            where "{data_config.extra_conditions}"
+            where {data_config.extra_conditions}
         """ if data_config.extra_conditions else ""
     ])
 
